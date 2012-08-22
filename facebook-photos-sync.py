@@ -9,7 +9,7 @@ import urlparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--access_token', required=True)
 parser.add_argument('--limit', type=int, default=50)
-parser.add_argument('--owner_cursor')
+parser.add_argument('--owner_cursor_file')
 parser.add_argument('--directory', required=True)
 
 args = parser.parse_args()
@@ -17,8 +17,10 @@ args = parser.parse_args()
 q = []
 q.append('SELECT object_id, src_big, owner_cursor FROM photo')
 q.append('WHERE owner=me()')
-if args.owner_cursor:
-  q.append('AND owner_cursor < "%s"' % (args.owner_cursor))
+if args.owner_cursor_file and os.path.exists(args.owner_cursor_file):
+  f = open(args.owner_cursor_file, 'r')
+  q.append('AND owner_cursor < "%s"' % (f.read()))
+  f.close()
 q.append('LIMIT %i' % (args.limit))
 
 url = 'https://graph.facebook.com/fql'
@@ -29,6 +31,11 @@ params = urllib.urlencode({
 })
 
 data = json.loads(urllib.urlopen('%s?%s' % (url, params)).read())
+
+if args.owner_cursor_file and len(data['data']):
+  f = open(args.owner_cursor_file, 'w')
+  f.write(data['data'][0]['owner_cursor'])
+  f.close()
 
 for row in data['data']:
   filename = urlparse.urlparse(row['src_big']).path.split('/')[-1]
