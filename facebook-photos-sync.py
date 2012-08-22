@@ -15,8 +15,7 @@ parser.add_argument('--directory', required=True)
 args = parser.parse_args()
 
 q = []
-q.append('SELECT object_id, src_big, owner_cursor FROM photo')
-q.append('WHERE owner=me()')
+q.append('SELECT images, owner_cursor FROM photo WHERE owner=me()')
 if args.owner_cursor_file and os.path.exists(args.owner_cursor_file):
   f = open(args.owner_cursor_file, 'r')
   q.append('AND owner_cursor < "%s"' % (f.read()))
@@ -38,11 +37,14 @@ if args.owner_cursor_file and len(data['data']):
   f.close()
 
 for row in data['data']:
-  filename = urlparse.urlparse(row['src_big']).path.split('/')[-1]
+  images = row['images']
+  images.sort(key=lambda value: value['width'])
+  source = images[-1]['source']
+  filename = urlparse.urlparse(source).path.split('/')[-1]
   path = os.path.abspath('/'.join([args.directory, filename]))
   if os.path.exists(path):
     continue
-  blob = urllib.urlopen(row['src_big']).read()
+  blob = urllib.urlopen(source).read()
   f = open(path, 'w')
   f.write(blob)
   f.close()
